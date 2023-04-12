@@ -14,6 +14,8 @@ def main():
                         help="paths to video files to transcribe")
     parser.add_argument("--model", default="small",
                         choices=whisper.available_models(), help="name of the Whisper model to use")
+    parser.add_argument("--language", default="en",
+                        help="audio language.")
     parser.add_argument("--output_dir", "-o", type=str,
                         default=".", help="directory to save the outputs")
     parser.add_argument("--output_srt", type=str2bool, default=False,
@@ -24,10 +26,12 @@ def main():
                         help="whether to print out the progress and debug messages")
 
     parser.add_argument("--task", type=str, default="transcribe", choices=[
-                        "transcribe", "translate"], help="whether to perform X->X speech recognition ('transcribe') or X->English translation ('translate')")
+        "transcribe", "translate"],
+                        help="whether to perform X->X speech recognition ('transcribe') or X->English translation ('translate')")
 
     args = parser.parse_args().__dict__
     model_name: str = args.pop("model")
+    language: str = args.pop("language")
     output_dir: str = args.pop("output_dir")
     output_srt: bool = args.pop("output_srt")
     srt_only: bool = args.pop("srt_only")
@@ -38,7 +42,7 @@ def main():
             f"{model_name} is an English-only model, forcing English detection.")
         args["language"] = "en"
 
-    model = whisper.load_model(model_name)
+    model = whisper.load_model(model_name, language=language)
     audios = get_audio(args.pop("video"))
     subtitles = get_subtitles(
         audios, output_srt or srt_only, output_dir, lambda audio_path: model.transcribe(audio_path, **args)
@@ -87,7 +91,7 @@ def get_subtitles(audio_paths: list, output_srt: bool, output_dir: str, transcri
     for path, audio_path in audio_paths.items():
         srt_path = output_dir if output_srt else tempfile.gettempdir()
         srt_path = os.path.join(srt_path, f"{filename(path)}.srt")
-        
+
         print(
             f"Generating subtitles for {filename(path)}... This might take a while."
         )
